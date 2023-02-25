@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Study Plan</title>
+    <css>
+        .container {
+            width: 800px;
+            margin: 0 auto;
+            font-family: sans-serif;
+        }
+        
+        .calendar {
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .calendar h1 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #444;
+        }
+        
+        .calendar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .calendar ul li {
+            font-size: 0.8rem;
+            padding: 5px;
+            margin: 5px;
+            border-radius: 5px;
+            background: #eee;
+            color: #444;
+        }
+    </css>
+    <script>
+        function highlight(topic) {
+            let els = document.querySelectorAll('li');
+            els.forEach(el => {
+                el.style.background = '#eee';
+                el.style.color = '#444';
+                if (el.innerHTML === topic) {
+                    el.style.background = '#444';
+                    el.style.color = '#eee';
+                }
+            });
+}
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="calendar">
+            {% for day in days %}
+            <h1>{{ day.date }}</h1>
+            <ul>
+                {% for topic in day.topics %}
+                <li><a href="javascript:void(0)" onclick="highlight('{{ topic }}')">{{ topic }}</a></li>
+                {% endfor %}
+            </ul>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
