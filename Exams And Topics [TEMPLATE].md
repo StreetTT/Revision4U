@@ -7,11 +7,12 @@
 - Topic 2
 - Topic 3
 
-## Example Paper - June 05
+## Example Paper - June 05 2023
 
 - These are Topics you need to learn in their entrity
 - Intergration
 - Binomial Expansion
+- Put more difficult topics near the bottom to revise them closer to the exam
 
 ---
 

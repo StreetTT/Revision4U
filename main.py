@@ -1,86 +1,258 @@
 import datetime
 
-"""Retrive Study Information"""
-f = open("Exams And Topics.md","r")
-inputFile = f.read()
-f.close()
-inputFile = inputFile.split("\n# ")[1:]
-for i in range(len(inputFile)):
-    inputFile[i] = inputFile[i].split("\n## ")
-    for j in range(len(inputFile[i])):
-        inputFile[i][j] = inputFile[i][j].split("\n- ")
-        for k in range(len(inputFile[i][j])):
-            inputFile[i][j][k] = inputFile[i][j][k].removesuffix("\n")
-            if k == 0:
-                inputFile[i][j][k] = inputFile[i][j][k].split(" - ")
+class ExamSeason:
+    def __init__(self):
+        self.Subjects = []
+        self.File = ""
+        self.Calander = []
+        self.PopulateCalander()
+        
+    def AddSubject(self,subject):
+        self.Subjects.append(subject)
 
-"""Parse Study Information"""
-allData = []
-for i in range(len(inputFile)):
-    tempSubjectDict = {
-"Subject": inputFile[i][0][0][0],
- "Papers": [
- ]
-}
-    for j in range(1,len(inputFile[i])):
+    def GetFile(self):
+        return self.File
+
+    def FileToList(self):
+        self.File = self.File.split("\n# ")[1:]
+        for i in range(len(self.File)):
+            self.File[i] = self.File[i].split("\n## ")
+            for j in range(len(self.File[i])):
+                self.File[i][j] = self.File[i][j].split("\n- ")
+                for k in range(len(self.File[i][j])):
+                    self.File[i][j][k] = self.File[i][j][k].removesuffix("\n")
+                    if k == 0:
+                        self.File[i][j][k] = self.File[i][j][k].split(" - ")
+    
+    def GetFileFromPC(self,filename):
+        f = open(filename,"r")
+        self.File = (f.read())
+        f.close()
+        self.FileToList()
+        
+    def ParseStudyData(self):
+        for i in range(len(self.GetFile())):
+            currentSubject = Subject()
+            currentSubject.SetSubject(self.GetFile()[i][0][0][0])
+            for j in range(1,len(self.GetFile()[i])):
+                currentPaper = Paper()
+                currentPaper.SetPaper(self.GetFile()[i][j][0][0])
+                dateIndex = self.FindDate(datetime.datetime.strptime(self.GetFile()[i][j][0][1], "%B %d %Y"))
+                currentPaper.SetDate(dateIndex)
+                fullTopics, halfTopics = currentPaper.SplitTopics(self.GetFile()[i][j][1:])
+                currentPaper.SetFullTopics(fullTopics)
+                currentPaper.SetHalfTopics(halfTopics)
+                currentSubject.AddPaper(currentPaper)
+                self.Calander[dateIndex].AddExam(currentPaper)
+                currentPaper.SetSubject(currentSubject)
+            self.AddSubject(currentSubject)
+    
+    def FindDate(self,date):
+        for index,dateValue in enumerate(self.Calander):
+            if dateValue.GetDate() == date:
+                return index
+        self.Calander.append(Date(date))
+        return len(self.Calander) - 1
+    
+    def PopulateCalander(self):
+        now = datetime.datetime((datetime.datetime.now()).year, 3, 1)
+        tomorrow = now
+        self.Calander = [Date(now)]
+        while tomorrow != now + datetime.timedelta(days=120):
+            self.Calander.append(Date(tomorrow))
+            tomorrow = tomorrow + datetime.timedelta(days=1)
+
+    def PrintCalander(self):
+        plan = "\n"
+        for date in self.Calander:
+            if not (date.IsEmpty()):
+                plan += ("# "+str(date)+"\n")
+                if date.GetExams() != []:
+                    for exam in date.GetExams():
+                        plan += (exam.GetSubject().GetSubject() + " - " + exam.GetPaper() + "\n")
+                    plan += "\n"
+                plan += "\n"
+                for sessionType in ("Consolidate", "Practice", "Learn"):
+                    if sessionType == "Consolidate" and date.GetConsolidateTopics() != []:
+                        plan += ("## " + sessionType +"\n\n")
+                        for topic in date.GetConsolidateTopics():
+                            plan += ("- " + topic + "\n")
+                    elif sessionType == "Practice" and date.GetPracticeTopics() != []:
+                        plan += ("## " + sessionType +"\n\n")
+                        for topic in date.GetPracticeTopics():
+                            plan += ("- " + topic + "\n")
+                    elif sessionType == "Learn" and date.GetLearnTopics() != []:
+                        plan += ("## " + sessionType +"\n\n")
+                        for topic in date.GetLearnTopics():
+                            plan += ("- " + topic + "\n")
+                plan += ("\n")
+        f = open("Study Plan.md","w")
+        f.write(plan)
+        f.close()
+        print(plan)
+
+    def PopulateStudyTimetable(self):
+        for subject in self.Subjects:
+            papers = subject.GetPapers()
+            for paper in papers:
+                spaces = int(paper.GetDate() / 10)
+                for topicIndex in range(len(paper.GetFullTopics())-1,0,-1):
+                    currentDay = paper.GetDate() - 10
+                    for sessionIndex,sessionType in enumerate(("Consolidate", "Practice", "Learn")):
+                        placed = False
+                        while not(placed) and currentDay > -1:
+                            if self.Calander[currentDay].GetTopicCount() != self.Calander[currentDay].GetDayMax():
+                                if sessionType == "Consolidate":
+                                    self.Calander[currentDay].AddConsolidateTopic(paper.GetFullTopics(topicIndex))
+                                elif sessionType == "Practice":
+                                    self.Calander[currentDay].AddPracticeTopic(paper.GetFullTopics(topicIndex))
+                                elif sessionType == "Learn":
+                                    self.Calander[currentDay].AddLearnTopic(paper.GetFullTopics(topicIndex))
+                                placed = True
+                            currentDay = currentDay - 1
+                        currentDay = currentDay - (spaces*(3-sessionIndex))
+
+class Subject:
+    def __init__(self):
+        self.Subject = None
+        self.Papers = []
+    
+    def AddPaper(self,paper):
+        self.Papers.append(paper)
+
+    def GetPapers(self):
+        return self.Papers
+        
+    def GetSubject(self):
+        return self.Subject
+        
+    def SetSubject(self, subject):
+        self.Subject = subject
+
+
+class Paper:
+    def __init__(self):
+        self.Paper = ""
+        self.Date = None
+        self.Subject = None
+        self.FullTopics = []
+        self.HalfTopics = []
+
+    def GetSubject(self):
+        return self.Subject
+        
+    def SetSubject(self, subject):
+        self.Subject = subject
+    
+    def SetFullTopics(self,topic):
+        self.FullTopics = (topic)
+    
+    def SetHalfTopics(self,topic):
+        self.HalfTopics = (topic)
+
+    def GetFullTopics(self,index=-1):
+        if index != -1:
+            return self.FullTopics[index]
+        return self.FullTopics
+    
+    def GetHalfTopics(self,index=-1):
+        if index != -1:
+            return self.HalfTopics[index]
+        return self.HalfTopics
+    
+    def GetDate(self):
+        return self.Date
+        
+    def SetDate(self, date):
+        self.Date = date
+        
+    def GetPaper(self):
+        return self.Paper
+        
+    def SetPaper(self, paper):
+        self.Paper = paper
+    def SplitTopics(self,topics):
         halvesFound = False
         k = 0
-        tempPaperDict = {
-         "Name:": inputFile[i][j][0][0],
-         "Date": inputFile[i][j][0][1].removesuffix(", 2023"),
-         "Topics" : inputFile[i][j][1:],
-         "Half Topics" : []
-     }
-        while not(halvesFound) and k < len(tempPaperDict["Topics"]) :
-            if "\n\n---" in tempPaperDict["Topics"][k]:
-                tempPaperDict["Topics"][k] = tempPaperDict["Topics"][k].removesuffix("\n\n---")
+        FullTopics = []
+        HalfTopics = []
+        while not(halvesFound) and k < len(topics) :
+            if "\n\n---" in topics[k]:
+                topics[k] = topics[k].removesuffix("\n\n---")
                 halvesFound = True
                 k = k + 1
-                tempPaperDict["Half Topics"] = tempPaperDict["Topics"][k:]
-                tempPaperDict["Topics"] = tempPaperDict["Topics"][:k]
+                HalfTopics = topics[k:]
+                FullTopics = topics[:k]
             else:
                 k = k + 1
-        tempSubjectDict["Papers"].append(tempPaperDict)
-    allData.append(tempSubjectDict)
+                FullTopics = topics
+        return FullTopics, HalfTopics
+            
+class Date:
+    def __init__(self,date):
+        self.Date = date
+        self.Exams = []
+        self.TopicCount = 0
+        self.LearnTopics = []
+        self.PracticeTopics = []
+        self.ConsolidateTopics = []
+        
+    def AddExam(self,exam):
+        self.Exams.append(exam)
 
-"""Create Study Timetable"""
-days = []
-start_date = datetime.date(2023, 2, 27)
-end_date = datetime.date(2023, 7, 9)
-while start_date <= end_date:
-  days.append(str(start_date.strftime('%B %dth '))[:-3])
-  start_date += datetime.timedelta(days=1)
-daysDict = {key: {"Learn":[], "Practice":[], "Consolidate":[]} for key in days}
+    def GetDayMax(self):
+        if len(self.Exams) == 0:
+            return 3
+        elif len(self.Exams) == 1:
+            return 1
+        return 0
+    
+    def AddLearnTopic(self,topic):
+        self.LearnTopics.append(topic)
+        self.TopicCount += 1
+    
+    def AddPracticeTopic(self,topic):
+        self.PracticeTopics.append(topic)
+        self.TopicCount += 1
+    
+    def AddConsolidateTopic(self,topic):
+        self.ConsolidateTopics.append(topic)
+        self.TopicCount += 1
 
-"""Populate Study Timetable"""
-for subject in allData:
-    for paper in subject["Papers"]:
-        ExamIndex = days.index(paper["Date"])
-        spaces = int(ExamIndex / 10)
-        # 1:2:3:4
-        for topicIndex in range(len(paper["Topics"])-1,0,-1):
-            currentDay = ExamIndex - 4
-            for sessionIndex,sessionType in enumerate(("Consolidate", "Practice", "Learn")):
-                placed = False
-                while not(placed) and currentDay > -1:
-                    if len(daysDict[days[currentDay]][sessionType]) != 3:
-                        daysDict[days[currentDay]][sessionType].append(paper["Topics"][topicIndex])
-                        placed = True
-                    currentDay = currentDay - 1
-                currentDay = currentDay - (spaces*(3-sessionIndex))
+    def GetExams(self):
+        return self.Exams
 
-"""Return Study Timetable"""
-plan = "\n"
-for day in daysDict:
-    if daysDict[day] != {"Learn":[], "Practice":[], "Consolidate":[]}:
-        plan += ("# "+day+"\n\n")
-        for sessionType in daysDict[day]:
-            if daysDict[day][sessionType] != []:
-                plan += ("## " + sessionType +"\n\n")
-                for topic in daysDict[day][sessionType]:
-                    plan += ("- " + topic + "\n")
-                plan += ("\n")
-f = open("Study Plan.md","w")
-f.write(plan)
-f.close()
-print(plan)
+    def GetLearnTopics(self):
+        return self.LearnTopics
+    
+    def GetPracticeTopics(self):
+        return self.PracticeTopics
+    
+    def GetConsolidateTopics(self):
+        return self.ConsolidateTopics
+
+    def GetTopicCount(self):
+        return self.TopicCount
+    
+    def GetDate(self):
+        return self.Date
+        
+    def SetDate(self, date):
+        self.Date = date
+
+    def IsEmpty(self):
+        return self.Exams == [] and self.TopicCount == 0
+
+    def __str__(self):
+        return self.Date.strftime("%B %d %Y")
+        
+def main():
+    CurrentExamSeason = ExamSeason()
+    CurrentExamSeason.GetFileFromPC("Exams And Topics.md")
+    CurrentExamSeason.ParseStudyData()
+    CurrentExamSeason.PopulateStudyTimetable()
+    CurrentExamSeason.PrintCalander()
+    
+if "__main__" == __name__:
+    main()
+
