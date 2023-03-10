@@ -4,8 +4,11 @@
 
 This project uses spaced repetiton to create a study timetable with 3 types of study embedded within it, all between March 1st and the date of your exam. Topics are looked through closer together at first, with the time between review increasing the closer one gets to their exam. This program also shows the date and time of your exams.
 The 3 Types of study are as follows:
+
 Learn - Giving you a chance to look over the topic and re-learn the core ideas
+
 Practice - Here you can look for topic specific preactice questions and mark them to see where you have gone wrong
+
 Consolidate - In this section, retry questions gone wrong before and look over their notes if gone wrong once again.
 
 ## Extra Information
