@@ -1,3 +1,4 @@
+# Classful
 import datetime
 
 class ExamSeason:
@@ -37,8 +38,9 @@ class ExamSeason:
             for j in range(1,len(self.GetFile()[i])):
                 currentPaper = Paper()
                 currentPaper.SetPaper(self.GetFile()[i][j][0][0])
-                dateIndex = self.FindDate(datetime.datetime.strptime(self.GetFile()[i][j][0][1], "%B %d %Y"))
+                dateIndex = self.FindDate(datetime.datetime.strptime(self.GetFile()[i][j][0][1], '%H:%M %B %d %Y'))
                 currentPaper.SetDate(dateIndex)
+                currentPaper.SetDateTime(datetime.datetime.strptime(self.GetFile()[i][j][0][1], '%H:%M %B %d %Y'))
                 fullTopics, halfTopics = currentPaper.SplitTopics(self.GetFile()[i][j][1:])
                 currentPaper.SetFullTopics(fullTopics)
                 currentPaper.SetHalfTopics(halfTopics)
@@ -49,7 +51,7 @@ class ExamSeason:
     
     def FindDate(self,date):
         for index,dateValue in enumerate(self.Calander):
-            if dateValue.GetDate() == date:
+            if dateValue.GetDate() == date.replace(hour=0, minute=0):
                 return index
         self.Calander.append(Date(date))
         return len(self.Calander) - 1
@@ -64,12 +66,12 @@ class ExamSeason:
 
     def PrintCalander(self):
         plan = "\n"
-        for date in self.Calander:
-            if not (date.IsEmpty()):
+        for date in (self.Calander):
+            if not (date.IsEmpty()) and date.GetDate() > (datetime.datetime.now() - datetime.timedelta(days=1)):
                 plan += ("# "+str(date)+"\n")
                 if date.GetExams() != []:
                     for exam in date.GetExams():
-                        plan += (exam.GetSubject().GetSubject() + " - " + exam.GetPaper() + "\n")
+                        plan += ('### ' + exam.GetSubject().GetSubject() + " - " + exam.GetDateTime().strftime("%H:%M") + " - " + exam.GetPaper() + "\n")
                     plan += "\n"
                 plan += "\n"
                 for sessionType in ("Consolidate", "Practice", "Learn"):
@@ -89,7 +91,6 @@ class ExamSeason:
         f = open("Study Plan.md","w")
         f.write(plan)
         f.close()
-        print(plan)
 
     def PopulateStudyTimetable(self):
         for subject in self.Subjects:
@@ -106,7 +107,7 @@ class ExamSeason:
                                     self.Calander[currentDay].AddConsolidateTopic(paper.GetFullTopics(topicIndex))
                                 elif sessionType == "Practice":
                                     self.Calander[currentDay].AddPracticeTopic(paper.GetFullTopics(topicIndex))
-                                elif sessionType == "Learn":
+                                else:
                                     self.Calander[currentDay].AddLearnTopic(paper.GetFullTopics(topicIndex))
                                 placed = True
                             currentDay = currentDay - 1
@@ -134,6 +135,7 @@ class Paper:
     def __init__(self):
         self.Paper = ""
         self.Date = None
+        self.Time = None
         self.Subject = None
         self.FullTopics = []
         self.HalfTopics = []
@@ -165,6 +167,12 @@ class Paper:
         
     def SetDate(self, date):
         self.Date = date
+
+    def GetDateTime(self):
+        return self.DateTime
+        
+    def SetDateTime(self, dateTime):
+        self.DateTime = dateTime    
         
     def GetPaper(self):
         return self.Paper
@@ -188,6 +196,10 @@ class Paper:
                 FullTopics = topics
         return FullTopics, HalfTopics
             
+class StudyTimetable:
+    def __init__(self):
+        self.Dates = []
+
 class Date:
     def __init__(self,date):
         self.Date = date
@@ -235,7 +247,7 @@ class Date:
         return self.TopicCount
     
     def GetDate(self):
-        return self.Date
+        return self.Date 
         
     def SetDate(self, date):
         self.Date = date
@@ -245,6 +257,14 @@ class Date:
 
     def __str__(self):
         return self.Date.strftime("%B %d %Y")
+    
+    def PrintDate(self):
+        print(str(self))
+        print("-")
+        print("Exams: " + str(self.Exams))
+        print("ConsolidateTopics: "+ str(self.ConsolidateTopics))
+        print("PracticeTopics: "+ str(self.PracticeTopics))
+        print("LearnTopics: "+ str(self.LearnTopics))
         
 def main():
     CurrentExamSeason = ExamSeason()
@@ -252,7 +272,7 @@ def main():
     CurrentExamSeason.ParseStudyData()
     CurrentExamSeason.PopulateStudyTimetable()
     CurrentExamSeason.PrintCalander()
+    print("Timetable Made!")
     
 if "__main__" == __name__:
     main()
-
